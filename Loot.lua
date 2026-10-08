@@ -29,16 +29,18 @@ function Loot.CurrentTier()
     return (EJ_GetCurrentTier and EJ_GetCurrentTier()) or (EJ_GetNumTiers and EJ_GetNumTiers()) or 1
 end
 
---- Raids (isRaid true) or dungeons of a tier: { { id=, name= }, ... }, newest first as the journal lists them.
+--- Raids (isRaid true) or dungeons of a tier: { { id=, name=, art= }, ... }, as the journal lists them.
+--- art is the journal's lore picture (or its background), used as the loot page banner.
 function Loot.Instances(tier, isRaid)
     local result = {}
     if not available() then return result end
     EJ_SelectTier(tier)
     local i = 1
     while true do
-        local instanceId, name = EJ_GetInstanceByIndex(i, isRaid)
+        local instanceId, name, _, bgImage, _, loreImage = EJ_GetInstanceByIndex(i, isRaid)
         if not instanceId then break end
-        result[#result + 1] = { id = instanceId, name = name }
+        local art = (loreImage and loreImage ~= 0 and loreImage) or (bgImage and bgImage ~= 0 and bgImage) or nil
+        result[#result + 1] = { id = instanceId, name = name, art = art }
         i = i + 1
     end
     return result
@@ -52,7 +54,13 @@ function Loot.Encounters(instanceId)
     while true do
         local name, _, encounterId = EJ_GetEncounterInfoByIndex(i, instanceId)
         if not encounterId then break end
-        result[#result + 1] = { id = encounterId, name = name }
+        -- The boss's journal portrait (a 128x64 bust).
+        local portrait
+        if type(EJ_GetCreatureInfo) == "function" then
+            local ok, _, _, _, _, icon = pcall(EJ_GetCreatureInfo, 1, encounterId)
+            if ok and icon and icon ~= 0 then portrait = icon end
+        end
+        result[#result + 1] = { id = encounterId, name = name, portrait = portrait }
         i = i + 1
     end
     return result

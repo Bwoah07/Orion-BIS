@@ -4,11 +4,12 @@ local _, ns = ...
 local L, T, Loot = ns.L, ns.T, ns.Loot
 local C = T.C
 
-local HEADER, FOOTER, SIDEBAR = 52, 28, 236
-local ITEM_ROW = 50
+local HEADER, FOOTER, SIDEBAR = 52, 30, 256
+local ITEM_ROW = 56
+local BANNER = 104
 
 local win = T.Box(UIParent, C.bg, C.border, "OrionBiSWindow")
-win:SetSize(900, 600)
+win:SetSize(980, 660)
 win:SetPoint("CENTER")
 win:SetFrameStrata("DIALOG")
 win:SetToplevel(true)
@@ -111,25 +112,50 @@ T.Fill(footer, C.panel)
 local footerRule = T.Rule(footer)
 footerRule:SetPoint("TOPLEFT")
 footerRule:SetPoint("TOPRIGHT")
-local status = T.Text(footer, 11, C.muted)
-status:SetPoint("LEFT", 14, 0)
-status:SetPoint("RIGHT", -14, 0)
+-- Left: sync state (with a coloured dot) and your list's counts. Right: guild lists and raid.
+local syncDot = footer:CreateTexture(nil, "ARTWORK")
+syncDot:SetSize(7, 7)
+syncDot:SetPoint("LEFT", 14, 0)
+local status = T.Text(footer, 11, C.text)
+status:SetPoint("LEFT", syncDot, "RIGHT", 8, 0)
+local statusRight = T.Text(footer, 11, C.muted, false, "RIGHT")
+statusRight:SetPoint("RIGHT", -14, 0)
+status:SetPoint("RIGHT", statusRight, "LEFT", -16, 0)
+
+local function capital(text) return (text:gsub("^%l", string.upper)) end
 
 local function refreshStatus()
     local parts = {}
-    local raid = ns.RaidName()
-    if raid and raid ~= "" then parts[#parts + 1] = raid end
-    local count = ns.ListCount()
-    parts[#parts + 1] = (count == 1 and L["%d list"] or L["%d lists"]):format(count)
     if OrionBiSDB.noSync then
-        parts[#parts + 1] = L["guild sync off"]
+        syncDot:SetColorTexture(unpack(C.muted))
+        parts[#parts + 1] = capital(L["guild sync off"])
     elseif IsInGuild() then
-        parts[#parts + 1] = L["shared with your guild"]
+        syncDot:SetColorTexture(unpack(C.m))
+        parts[#parts + 1] = capital(L["shared with your guild"])
     else
-        parts[#parts + 1] = L["not in a guild"]
+        syncDot:SetColorTexture(unpack(C.danger))
+        parts[#parts + 1] = capital(L["not in a guild"])
     end
-    if type(ORION_BIS_DATA) == "table" then parts[#parts + 1] = L["guild data loaded"] end
-    status:SetText(table.concat(parts, "   ·   "))
+    -- Your list at a glance: "BiS 3  Upgrade 2  Minor 1" in their colours.
+    local counts = {}
+    local list = ns.MyList()
+    for _, want in pairs(list and list.items or {}) do
+        if not want.got then counts[want.p] = (counts[want.p] or 0) + 1 end
+    end
+    local mine = {}
+    for _, p in ipairs(ns.PRIORITIES) do
+        if counts[p] then mine[#mine + 1] = ns.PriorityHex(p) .. ns.PriorityLabel(p) .. " " .. counts[p] .. "|r" end
+    end
+    if #mine > 0 then parts[#parts + 1] = table.concat(mine, "   ") end
+    status:SetText(table.concat(parts, "     |cff4a4c5c|||r     "))
+
+    local right = {}
+    local raid = ns.RaidName()
+    if raid and raid ~= "" then right[#right + 1] = raid end
+    local count = ns.ListCount()
+    right[#right + 1] = (count == 1 and L["%d list"] or L["%d lists"]):format(count)
+    if type(ORION_BIS_DATA) == "table" then right[#right + 1] = L["guild data loaded"] end
+    statusRight:SetText(table.concat(right, "   ·   "))
 end
 
 local body = CreateFrame("Frame", nil, win)
@@ -253,10 +279,27 @@ local bossScroll = T.Scroll(sidebar)
 bossScroll:SetPoint("TOPLEFT", bossLabel, "BOTTOMLEFT", -2, -6)
 bossScroll:SetPoint("BOTTOMRIGHT", -8, 10)
 
+local BOSS_ROW = 42
 local bossButton, hideBossButtons = pool(function()
-    local b = T.Button(bossScroll.content, "", SIDEBAR - 34, 30, nil, "nav")
+    local b = T.Button(bossScroll.content, "", SIDEBAR - 34, BOSS_ROW - 4, nil, "nav")
     b.label:SetJustifyH("LEFT")
-    b.label:SetPoint("LEFT", 12, 0)
+    -- The journal's boss portrait, cropped to the face.
+    b.portrait = b:CreateTexture(nil, "ARTWORK")
+    b.portrait:SetSize(54, 30)
+    b.portrait:SetPoint("LEFT", 8, 0)
+    b.portrait:SetTexCoord(0.08, 0.92, 0.02, 0.98)
+    function b:SetPortrait(texture)
+        self.label:ClearAllPoints()
+        if texture then
+            self.portrait:SetTexture(texture)
+            self.portrait:Show()
+            self.label:SetPoint("LEFT", self.portrait, "RIGHT", 10, 0)
+        else
+            self.portrait:Hide()
+            self.label:SetPoint("LEFT", 12, 0)
+        end
+        self.label:SetPoint("RIGHT", -8, 0)
+    end
     return b
 end)
 
@@ -265,35 +308,92 @@ local main = CreateFrame("Frame", nil, loot)
 main:SetPoint("TOPLEFT", SIDEBAR, 0)
 main:SetPoint("BOTTOMRIGHT")
 
-local bossTitle = T.Text(main, 18, C.text, true)
-bossTitle:SetPoint("TOPLEFT", 20, -16)
-bossTitle:SetPoint("RIGHT", main, "RIGHT", -280, 0)
-local bossSub = T.Text(main, 11, C.muted)
-bossSub:SetPoint("TOPLEFT", bossTitle, "BOTTOMLEFT", 0, -4)
-bossSub:SetPoint("RIGHT", main, "RIGHT", -280, 0)
+-- Banner: the raid's Adventure Guide art, darkened, with the boss portrait and name on top.
+local banner = CreateFrame("Frame", nil, main)
+banner:SetPoint("TOPLEFT")
+banner:SetPoint("TOPRIGHT")
+banner:SetHeight(BANNER)
+T.Fill(banner, C.panel)
+banner.art = banner:CreateTexture(nil, "BACKGROUND", nil, 1)
+banner.art:SetAllPoints()
+banner.shade = banner:CreateTexture(nil, "BACKGROUND", nil, 2)
+banner.shade:SetAllPoints()
+banner.shade:SetColorTexture(1, 1, 1, 1)
+banner.shade:SetGradient("HORIZONTAL", CreateColor(0.03, 0.03, 0.05, 0.92), CreateColor(0.03, 0.03, 0.05, 0.45))
+banner.fade = banner:CreateTexture(nil, "BACKGROUND", nil, 3)
+banner.fade:SetPoint("BOTTOMLEFT")
+banner.fade:SetPoint("BOTTOMRIGHT")
+banner.fade:SetHeight(BANNER / 2)
+banner.fade:SetColorTexture(1, 1, 1, 1)
+banner.fade:SetGradient("VERTICAL", CreateColor(C.bg[1], C.bg[2], C.bg[3], 0.9), CreateColor(C.bg[1], C.bg[2], C.bg[3], 0))
+local bannerRule = banner:CreateTexture(nil, "ARTWORK")
+bannerRule:SetPoint("BOTTOMLEFT")
+bannerRule:SetPoint("BOTTOMRIGHT")
+bannerRule:SetHeight(1)
+bannerRule:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.35)
+
+-- Journal lore art is about 2:1; show a horizontal strip of it that fills the banner.
+local function cropArt()
+    local w, h = banner:GetWidth(), banner:GetHeight()
+    if not w or w <= 0 then return end
+    local frac = math.min(1, (h / w) * 2)
+    local top = math.max(0, 0.42 - frac / 2)
+    banner.art:SetTexCoord(0, 1, top, math.min(1, top + frac))
+end
+banner:SetScript("OnSizeChanged", cropArt)
+
+local function setBannerArt(texture)
+    if texture then
+        banner.art:SetTexture(texture)
+        banner.art:Show()
+        cropArt()
+    else
+        banner.art:Hide()
+    end
+end
+
+local bossPortrait = banner:CreateTexture(nil, "ARTWORK")
+bossPortrait:SetSize(112, 56)
+bossPortrait:SetPoint("BOTTOMLEFT", 14, 12)
+
+local bossTitle = T.Text(banner, 20, C.text, true)
+local bossSub = T.Text(banner, 11, C.muted)
+local function placeTitle(hasPortrait)
+    bossTitle:ClearAllPoints()
+    if hasPortrait then
+        bossTitle:SetPoint("BOTTOMLEFT", bossPortrait, "RIGHT", 10, 2)
+    else
+        bossTitle:SetPoint("BOTTOMLEFT", banner, "LEFT", 20, -4)
+    end
+    bossTitle:SetPoint("RIGHT", banner, "RIGHT", -20, 0)
+    bossSub:ClearAllPoints()
+    bossSub:SetPoint("TOPLEFT", bossTitle, "BOTTOMLEFT", 0, -5)
+    bossSub:SetPoint("RIGHT", banner, "RIGHT", -20, 0)
+end
+placeTitle(false)
 
 local filterButtons = {}
 local FILTERS = { { "spec", L["My spec"] }, { "class", L["My class"] }, { "all", L["All"] } }
 local prevFilter
 for i = #FILTERS, 1, -1 do
     local id, label = FILTERS[i][1], FILTERS[i][2]
-    local b = T.Button(main, label, 0, 26, function()
+    local b = T.Button(banner, label, 0, 26, function()
         ns.SetSetting("lootFilter", id)
         loot:Refresh()
     end)
-    b:SetWidth(math.max(64, b.label:GetStringWidth() + 22))
-    if prevFilter then b:SetPoint("RIGHT", prevFilter, "LEFT", -4, 0) else b:SetPoint("TOPRIGHT", -20, -18) end
+    b:SetWidth(76)
+    if prevFilter then b:SetPoint("RIGHT", prevFilter, "LEFT", -4, 0) else b:SetPoint("TOPRIGHT", -16, -14) end
     filterButtons[id] = b
     prevFilter = b
 end
 
 local lootNotice = T.Text(main, 12, C.muted, false, "CENTER")
-lootNotice:SetPoint("TOPLEFT", 20, -100)
-lootNotice:SetPoint("TOPRIGHT", -20, -100)
+lootNotice:SetPoint("TOPLEFT", 20, -(BANNER + 40))
+lootNotice:SetPoint("TOPRIGHT", -20, -(BANNER + 40))
 lootNotice:SetWordWrap(true)
 
 local itemScroll = T.Scroll(main)
-itemScroll:SetPoint("TOPLEFT", 20, -68)
+itemScroll:SetPoint("TOPLEFT", 16, -(BANNER + 12))
 itemScroll:SetPoint("BOTTOMRIGHT", -12, 12)
 
 local function itemRow(parent, withChips)
@@ -301,7 +401,7 @@ local function itemRow(parent, withChips)
     row:SetHeight(ITEM_ROW - 4)
     row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     row.bg = T.Fill(row, C.row)
-    row.icon = T.ItemIcon(row, 36)
+    row.icon = T.ItemIcon(row, 40)
     row.icon:SetPoint("LEFT", 6, 0)
     row.name = T.Text(row, 13, C.text, true)
     row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 10, -2)
@@ -318,15 +418,27 @@ local function itemRow(parent, withChips)
     return row
 end
 
+local LOOT_ROW, LOOT_ROW_WANTED = 60, 76
 local lootRow, hideLootRows = pool(function()
     local row = itemRow(itemScroll.content)
-    -- On your list: a stripe in the priority's colour and a faint tint.
+    -- On your list: a thick stripe and an outline in the priority's colour, and a tint.
     row.stripe = row:CreateTexture(nil, "ARTWORK")
-    row.stripe:SetPoint("TOPLEFT"); row.stripe:SetPoint("BOTTOMLEFT"); row.stripe:SetWidth(3)
-    row.icon:SetPoint("LEFT", 10, 0)
+    row.stripe:SetPoint("TOPLEFT"); row.stripe:SetPoint("BOTTOMLEFT"); row.stripe:SetWidth(4)
+    row.outline = T.Border(row, C.border)
+    row.icon:SetSize(44, 44)
+    row.icon:ClearAllPoints()
+    row.icon:SetPoint("TOPLEFT", 14, -8)
+    T.SetFont(row.name, 14, true)
+    row.name:ClearAllPoints()
+    row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 12, -3)
+    row.sub:ClearAllPoints()
+    row.sub:SetPoint("TOPLEFT", row.name, "BOTTOMLEFT", 0, -6)
+    -- Who else wants it (only when someone does).
+    row.wanted = T.Text(row, 11, C.text)
+    row.wanted:SetPoint("TOPLEFT", row.sub, "BOTTOMLEFT", 0, -6)
     local options = {}
     for _, p in ipairs(ns.PRIORITIES) do options[#options + 1] = { value = p, text = ns.PriorityLabel(p), color = C[p] } end
-    row.seg = T.Segmented(row, options, 26, function(p)
+    row.seg = T.Pills(row, options, 26, function(p)
         local want = ns.MyWant(row.itemId)
         if want and want.p == p then
             ns.EditMine(row.itemId, nil)
@@ -335,23 +447,26 @@ local lootRow, hideLootRows = pool(function()
             ns.EditMine(row.itemId, p)
         end
     end)
-    row.seg:SetPoint("RIGHT", -10, 0)
+    row.seg:SetPoint("TOPRIGHT", -12, -17)
     -- Keep the row lit while the mouse is on its buttons.
     row.seg.onEnter = function() row:GetScript("OnEnter")(row) end
     row.seg.onLeave = function() row:GetScript("OnLeave")(row) end
     row.level = T.Text(row, 12, C.muted, true, "RIGHT")
-    row.level:SetPoint("RIGHT", row.seg, "LEFT", -12, 0)
+    row.level:SetPoint("RIGHT", row.seg, "LEFT", -14, 0)
     row.name:SetPoint("RIGHT", row.level, "LEFT", -10, 0)
     row.sub:SetPoint("RIGHT", row.level, "LEFT", -10, 0)
+    row.wanted:SetPoint("RIGHT", row, "RIGHT", -12, 0)
     function row:Paint()
         local want = self.want
         local hover = self:IsMouseOver()
         if want then
             local c = C[want.p]
-            self.bg:SetColorTexture(c[1] * 0.18 + 0.09, c[2] * 0.18 + 0.09, c[3] * 0.18 + 0.11, 1)
+            self.bg:SetColorTexture(c[1] * 0.24 + 0.08, c[2] * 0.24 + 0.08, c[3] * 0.24 + 0.10, 1)
             self.stripe:SetColorTexture(c[1], c[2], c[3], 1)
+            self.outline:SetColor(c[1], c[2], c[3], 0.55)
         else
             self.bg:SetColorTexture(unpack(hover and C.rowHover or C.row))
+            self.outline:SetColor(1, 1, 1, hover and 0.08 or 0)
         end
         self.stripe:SetShown(want and true or false)
         if hover and want then self.bg:SetAlpha(0.85) else self.bg:SetAlpha(1) end
@@ -412,10 +527,18 @@ local function renderLootRows()
         local info = {}
         if item.slot and item.slot ~= "" then info[#info + 1] = item.slot end
         if item.armorType and item.armorType ~= "" then info[#info + 1] = item.armorType end
+        if #info == 0 and C_Item and C_Item.GetItemInfoInstant then
+            -- Tokens, relics and the like have no slot in the journal: show their item type instead.
+            local _, itemType, itemSubType = C_Item.GetItemInfoInstant(item.itemId)
+            local kind = (itemSubType and itemSubType ~= "" and itemSubType) or itemType
+            if kind and kind ~= "" then info[#info + 1] = kind end
+        end
+        row.sub:SetText(table.concat(info, "  ·  "))
         local wanted = ns.WantersText(item.itemId, true)
-        local subText = table.concat(info, "  ·  ")
-        if wanted then subText = (subText ~= "" and (subText .. "     ") or "") .. wanted end
-        row.sub:SetText(subText)
+        row.wanted:SetText(wanted and ("|cff8f90a1" .. L["Wanted by"] .. "|r   " .. wanted) or "")
+        row.wanted:SetShown(wanted and true or false)
+        local height = wanted and LOOT_ROW_WANTED or LOOT_ROW
+        row:SetHeight(height - 6)
         local level = item.slot and item.slot ~= "" and itemLevel(item.link)
         row.level:SetText(level and ("|cff8f90a1" .. (ITEM_LEVEL_ABBR or "iLvl") .. "|r  " .. level) or "")
         local want = ns.MyWant(item.itemId)
@@ -423,7 +546,7 @@ local function renderLootRows()
         row.seg:Set(want and want.p)
         row:Paint()
         row:Show()
-        y = y + ITEM_ROW
+        y = y + height
     end
     hideLootRows(#itemsShown + 1)
     itemScroll:SetContentHeight(y)
@@ -439,7 +562,13 @@ function loot:Refresh()
     local mode = browse.mode
     local isRaid = mode == "raid"
     local filter = ns.Setting("lootFilter")
-    for id, b in pairs(filterButtons) do b:SetActive(id == filter) end
+    for id, b in pairs(filterButtons) do
+        -- Measure here, not at creation: the font may not be ready yet and the anchored label reports a clipped width.
+        local fs = b.label
+        local w = fs.GetUnboundedStringWidth and fs:GetUnboundedStringWidth() or fs:GetStringWidth()
+        b:SetWidth(math.max(76, math.ceil(w) + 28))
+        b:SetActive(id == filter)
+    end
     for id, b in pairs(modeButtons) do b:SetActive(id == mode) end
 
     lootNotice:SetText("")
@@ -478,6 +607,9 @@ function loot:Refresh()
         renderLootRows()
         bossTitle:SetText("")
         bossSub:SetText("")
+        bossPortrait:Hide()
+        setBannerArt(nil)
+        placeTitle(false)
         lootNotice:SetText(L["Nothing here in this expansion."])
         return
     end
@@ -512,8 +644,9 @@ function loot:Refresh()
     encounter = encounter or encounters[1]
     for i, enc in ipairs(encounters) do
         local b = bossButton(i)
-        b:SetPoint("TOPLEFT", 0, -(i - 1) * 32)
+        b:SetPoint("TOPLEFT", 0, -(i - 1) * BOSS_ROW)
         b:SetText(enc.name)
+        b:SetPortrait(enc.portrait)
         b:SetActive(encounter and enc.id == encounter.id)
         b:SetScript("OnClick", function()
             browse.encounter = enc.id
@@ -523,13 +656,17 @@ function loot:Refresh()
         b:Show()
     end
     hideBossButtons(#encounters + 1)
-    bossScroll:SetContentHeight(#encounters * 32)
+    bossScroll:SetContentHeight(#encounters * BOSS_ROW)
     if not encounter then
         itemsShown = {}
         renderLootRows()
         return
     end
     browse.encounter = encounter.id
+    setBannerArt(instance.art)
+    if encounter.portrait then bossPortrait:SetTexture(encounter.portrait) end
+    bossPortrait:SetShown(encounter.portrait and true or false)
+    placeTitle(encounter.portrait ~= nil)
     bossTitle:SetText(encounter.name)
     bossSub.instanceName = instance.name
     bossSub:SetText(instance.name .. (difficulty and ("  ·  " .. difficultyLabel(difficulty)) or ""))

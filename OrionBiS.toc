@@ -12,7 +12,7 @@
 ## Notes-zhCN: 团队副本心愿单：按首领挑选BiS装备，查看公会成员的清单，想要的物品掉落时会提醒你。
 ## Notes-zhTW: 團隊副本願望清單：依首領挑選BiS裝備，查看公會成員的清單，想要的物品掉落時會提醒你。
 ## Author: Orion (EU Silvermoon)
-## Version: 2.3.2
+## Version: 2.4.0
 ## X-Curse-Project-ID: 1731529
 ## Category: Raid
 ## IconTexture: Interface\AddOns\OrionBiS\Media\Icons\AddonIcon
