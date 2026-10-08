@@ -13,6 +13,7 @@
 ## Notes-zhTW: 團隊副本願望清單：依首領挑選BiS裝備，查看公會成員的清單，想要的物品掉落時會提醒你。
 ## Author: Orion (EU Silvermoon)
 ## Version: 2.3.1
+## X-Curse-Project-ID: 1731529
 ## Category: Raid
 ## IconTexture: Interface\AddOns\OrionBiS\Media\Icons\Logo
 ## AddonCompartmentFunc: OrionBiS_OnAddonCompartmentClick
