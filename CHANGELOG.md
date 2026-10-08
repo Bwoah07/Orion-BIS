@@ -1,5 +1,14 @@
 # Orion BiS
 
+## 2.4.0
+- Design overhaul: the loot page has a banner with the raid's art and the boss portrait, boss portraits in the
+  boss list, bigger loot rows with the item slot, colored BiS/Upgrade/Minor buttons, a "Wanted by" line, and a
+  clearer status bar.
+- Your alts can keep their own lists, even in other guilds. Only lists from people in your current guild are
+  used.
+- Minor fixes: buttons no longer cut off their text, borders stay sharp at any UI scale, and the drop alert now
+  says "No one in your guild wants it".
+
 ## 2.3.2
 - Marked as up to date for patch 12.1.5.
 

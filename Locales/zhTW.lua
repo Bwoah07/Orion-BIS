@@ -55,7 +55,7 @@ ns.Translate("zhTW", {
     ["No lists yet. They arrive from guild members who use Orion BiS."] = "尚無清單。清單來自使用 Orion BiS 的公會成員。",
     ["No loot listed for this boss."] = "此首領沒有列出掉落。",
     ["No matches."] = "沒有結果。",
-    ["Nobody else wants it"] = "沒有其他人需要",
+    ["No one in your guild wants it"] = "公會中沒有人需要",
     ["None"] = "無",
     ["Nothing for your spec here. Try All to see every item."] = "這裡沒有適合你專精的物品。選擇「全部」查看所有物品。",
     ["Nothing here in this expansion."] = "此資料片中這裡沒有內容。",

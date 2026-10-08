@@ -55,7 +55,7 @@ ns.Translate("ptBR", {
     ["No lists yet. They arrive from guild members who use Orion BiS."] = "Nenhuma lista ainda. Elas chegam de membros da guilda que usam Orion BiS.",
     ["No loot listed for this boss."] = "Nenhum saque listado para este chefe.",
     ["No matches."] = "Nenhum resultado.",
-    ["Nobody else wants it"] = "Ninguém mais quer",
+    ["No one in your guild wants it"] = "Ninguém da sua guilda quer",
     ["None"] = "Nenhum",
     ["Nothing for your spec here. Try All to see every item."] = "Nada para sua especialização aqui. Escolha Todos para ver cada item.",
     ["Nothing here in this expansion."] = "Nada aqui nesta expansão.",

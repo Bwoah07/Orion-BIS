@@ -128,13 +128,43 @@ ns.parseCode = parseCode
 local lists = {} -- = OrionBiSDB.lists, set on load
 local byItem = {}
 
+-- ---- Guild membership ----------------------------------------------------------------------
+-- Lists are saved for the whole account, so alts in other guilds (and lists from the guild website) all end up in
+-- OrionBiSDB. Only lists of people in your current guild are shown, used for alerts, or shared. Until the roster has
+-- loaded we don't filter, so nothing flickers away at login.
+local roster, rosterReady = {}, false
+
+local function refreshRoster()
+    local fresh = {}
+    if not (IsInGuild and IsInGuild()) then
+        roster, rosterReady = fresh, true -- no guild: only your own list counts
+        return
+    end
+    local count = type(GetNumGuildMembers) == "function" and GetNumGuildMembers() or 0
+    if type(count) ~= "number" or count == 0 or type(GetGuildRosterInfo) ~= "function" then return end
+    for i = 1, count do
+        local full = GetGuildRosterInfo(i)
+        if type(full) == "string" then
+            local name, realm = full:match("^([^-]+)-(.+)$")
+            fresh[key(name or full, realm or myRealm())] = true
+        end
+    end
+    roster, rosterReady = fresh, true
+end
+
+local function inGuild(k)
+    if k == playerKey() or not rosterReady then return true end
+    return roster[k] == true
+end
+ns.InGuild = inGuild
+
 local function rebuild()
     byItem = {}
-    for _, list in pairs(lists) do
-        for itemId, want in pairs(list.items) do
+    for k, list in pairs(lists) do
+        if inGuild(k) then for itemId, want in pairs(list.items) do
             byItem[itemId] = byItem[itemId] or {}
             table.insert(byItem[itemId], { list = list, p = want.p, got = want.got })
-        end
+        end end
     end
     for _, wanters in pairs(byItem) do
         table.sort(wanters, function(a, b)
@@ -153,7 +183,7 @@ function ns.Lists() return lists end
 function ns.ItemsWanted() return byItem end
 function ns.ListCount()
     local count = 0
-    for _ in pairs(lists) do count = count + 1 end
+    for k in pairs(lists) do if inGuild(k) then count = count + 1 end end
     return count
 end
 
@@ -234,13 +264,15 @@ local function shareList(k) queuePayload("L" .. k) end
 local function buildPayload(id)
     if id == "S" then
         local entries = {}
-        for _, list in pairs(lists) do entries[#entries + 1] = list.name .. "-" .. list.realm .. "=" .. (list.at or 0) end
+        for k, list in pairs(lists) do
+            if inGuild(k) then entries[#entries + 1] = list.name .. "-" .. list.realm .. "=" .. (list.at or 0) end
+        end
         table.sort(entries)
         local raid = OrionBiSDB.raid or {}
         return "S\t" .. (raid.at or 0) .. "\t" .. (raid.name or "") .. "\t" .. table.concat(entries, ",")
     end
     local list = lists[id:sub(2)]
-    if not list then return nil end
+    if not list or not inGuild(id:sub(2)) then return nil end
     return "L\t" .. (list.at or 0) .. "\t" .. (list.src or "game") .. "\t" .. encodeEntry(list)
 end
 
@@ -303,7 +335,7 @@ local function onSummary(text)
         if name then theirs[key(name, realm)] = tonumber(at) end
     end
     for k, list in pairs(lists) do
-        if (theirs[k] or -1) < (list.at or 0) then offerList(k) end
+        if inGuild(k) and (theirs[k] or -1) < (list.at or 0) then offerList(k) end
     end
     local behind = (tonumber(raidAt) or 0) > ((OrionBiSDB.raid and OrionBiSDB.raid.at) or 0)
     for k, at in pairs(theirs) do
@@ -440,6 +472,25 @@ local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_ENTERING_WORLD")
 events:RegisterEvent("CHAT_MSG_ADDON")
+events:RegisterEvent("GUILD_ROSTER_UPDATE")
+events:RegisterEvent("PLAYER_GUILD_UPDATE")
+
+-- The roster event fires often; settle for a second, then rebuild only if membership changed.
+local rosterTimer
+local function rosterChanged()
+    if rosterTimer then return end
+    rosterTimer = C_Timer.NewTimer(1, function()
+        rosterTimer = nil
+        local before, wasReady = roster, rosterReady
+        refreshRoster()
+        local same = wasReady == rosterReady
+        if same then
+            for k in pairs(roster) do if not before[k] then same = false break end end
+            for k in pairs(before) do if not roster[k] then same = false break end end
+        end
+        if not same then listsChanged() end
+    end)
+end
 events:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
         if ... ~= ADDON then return end
@@ -461,9 +512,13 @@ events:SetScript("OnEvent", function(_, event, ...)
     elseif event == "PLAYER_ENTERING_WORLD" then
         local isLogin, isReload = ...
         if isLogin or isReload then
+            if C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster() end
+            rosterChanged()
             -- Tell the guild what we have; anyone with newer lists answers.
             C_Timer.After(12, function() sync.lastSummary = now(); queuePayload("S") end)
         end
+    elseif event == "GUILD_ROSTER_UPDATE" or event == "PLAYER_GUILD_UPDATE" then
+        rosterChanged()
     elseif event == "CHAT_MSG_ADDON" then
         local prefix, text, channel, sender = ...
         if prefix ~= PREFIX or channel ~= "GUILD" then return end

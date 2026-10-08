@@ -55,7 +55,7 @@ ns.Translate("koKR", {
     ["No lists yet. They arrive from guild members who use Orion BiS."] = "아직 목록이 없습니다. Orion BiS를 쓰는 길드원에게서 받아옵니다.",
     ["No loot listed for this boss."] = "이 우두머리의 전리품이 없습니다.",
     ["No matches."] = "결과 없음.",
-    ["Nobody else wants it"] = "원하는 사람이 없습니다",
+    ["No one in your guild wants it"] = "길드에서 원하는 사람이 없습니다",
     ["None"] = "없음",
     ["Nothing for your spec here. Try All to see every item."] = "내 전문화용 아이템이 없습니다. 전체를 선택하면 모든 아이템을 봅니다.",
     ["Nothing here in this expansion."] = "이 확장팩에는 해당 항목이 없습니다.",

@@ -54,10 +54,21 @@ function T.Border(frame, color, size)
         tex:SetColorTexture(unpack(color))
         edges[i] = tex
     end
-    edges[1]:SetPoint("TOPLEFT"); edges[1]:SetPoint("TOPRIGHT"); edges[1]:SetHeight(size)
-    edges[2]:SetPoint("BOTTOMLEFT"); edges[2]:SetPoint("BOTTOMRIGHT"); edges[2]:SetHeight(size)
-    edges[3]:SetPoint("TOPLEFT"); edges[3]:SetPoint("BOTTOMLEFT"); edges[3]:SetWidth(size)
-    edges[4]:SetPoint("TOPRIGHT"); edges[4]:SetPoint("BOTTOMRIGHT"); edges[4]:SetWidth(size)
+    edges[1]:SetPoint("TOPLEFT"); edges[1]:SetPoint("TOPRIGHT")
+    edges[2]:SetPoint("BOTTOMLEFT"); edges[2]:SetPoint("BOTTOMRIGHT")
+    edges[3]:SetPoint("TOPLEFT"); edges[3]:SetPoint("BOTTOMLEFT")
+    edges[4]:SetPoint("TOPRIGHT"); edges[4]:SetPoint("BOTTOMRIGHT")
+    -- At UI scales below 1 a 1-unit line is thinner than a screen pixel and can vanish depending on where the frame
+    -- lands, so every edge is kept at least one real pixel wide.
+    local function fit()
+        for i, e in ipairs(edges) do
+            if PixelUtil then
+                if i <= 2 then PixelUtil.SetHeight(e, size, 1) else PixelUtil.SetWidth(e, size, 1) end
+            elseif i <= 2 then e:SetHeight(size) else e:SetWidth(size) end
+        end
+    end
+    fit()
+    if frame.HookScript then frame:HookScript("OnShow", fit) end
     return {
         SetColor = function(_, r, g, b, a) for _, e in ipairs(edges) do e:SetColorTexture(r, g, b, a or 1) end end,
         SetShown = function(_, shown) for _, e in ipairs(edges) do e:SetShown(shown) end end,
@@ -494,6 +505,52 @@ function T.Segmented(parent, options, height, onPick)
     end
     seg:Set(nil)
     return seg
+end
+
+--- Separate coloured pills, like BiS  Upgrade  Minor. Each pill is outlined and labelled in its own colour; the
+--- picked one is filled. pills:Set(value) picks one (nil for none); onPick(value) fires on click.
+function T.Pills(parent, options, height, onPick)
+    local holder = CreateFrame("Frame", nil, parent)
+    holder:SetHeight(height or 24)
+    holder.buttons = {}
+    local x = 0
+    for i, opt in ipairs(options) do
+        local b = CreateFrame("Button", nil, holder)
+        b.value, b.color = opt.value, opt.color or C.accent
+        b.bg = T.Fill(b, { 1, 1, 1, 0 }, "BACKGROUND")
+        b.border = T.Border(b, b.color)
+        b.label = T.Text(b, 11, b.color, true, "CENTER")
+        b.label:SetPoint("LEFT", 4, 0)
+        b.label:SetPoint("RIGHT", -4, 0)
+        b.label:SetText(opt.text)
+        local width = math.max(opt.minWidth or 52, math.ceil((b.label:GetStringWidth() or 0) + 22))
+        b:SetSize(width, height or 24)
+        b:SetPoint("TOPLEFT", x, 0)
+        function b:Paint()
+            local c, hover = self.color, self:IsMouseOver()
+            if holder.current == self.value then
+                self.bg:SetColorTexture(c[1], c[2], c[3], hover and 1 or 0.92)
+                self.border:SetColor(c[1], c[2], c[3], 1)
+                self.label:SetTextColor(0.07, 0.07, 0.09, 1)
+            else
+                self.bg:SetColorTexture(c[1], c[2], c[3], hover and 0.18 or 0.06)
+                self.border:SetColor(c[1], c[2], c[3], hover and 0.9 or 0.45)
+                self.label:SetTextColor(c[1], c[2], c[3], hover and 1 or 0.8)
+            end
+        end
+        b:SetScript("OnEnter", function(self) self:Paint(); if holder.onEnter then holder.onEnter() end end)
+        b:SetScript("OnLeave", function(self) self:Paint(); if holder.onLeave then holder.onLeave() end end)
+        b:SetScript("OnClick", function(self) onPick(self.value) end)
+        holder.buttons[i] = b
+        x = x + width + (i < #options and 6 or 0)
+    end
+    holder:SetWidth(x)
+    function holder:Set(value)
+        self.current = value
+        for _, b in ipairs(self.buttons) do b:Paint() end
+    end
+    holder:Set(nil)
+    return holder
 end
 
 --- Square item icon with a quality-coloured edge.
