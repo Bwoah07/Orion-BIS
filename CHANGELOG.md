@@ -1,5 +1,8 @@
 # Orion BiS
 
+## 2.3.2
+- Marked as up to date for patch 12.1.5.
+
 ## 2.3.1
 - The glow behind the Orion alert is stronger: a brighter flash, then it stays visible and breathes.
 - Fixed the "AchievementShield_OnLoad" warning the achievement toast caused.
