@@ -1,0 +1,39 @@
+## Interface: 120100, 120005, 120001, 120000
+## Title: Orion BiS
+## Notes: Raid wishlists: pick your BiS boss by boss, see your guild's lists, and get an alert when an item you want drops.
+## Notes-deDE: Raid-Wunschlisten: BiS Boss für Boss wählen, die Listen deiner Gilde sehen und eine Meldung erhalten, wenn ein gewünschter Gegenstand droppt.
+## Notes-frFR: Listes de souhaits de raid : choisissez votre BiS boss par boss, voyez les listes de votre guilde et soyez alerté quand un objet voulu tombe.
+## Notes-esES: Listas de deseos de banda: elige tu BiS jefe a jefe, mira las listas de tu hermandad y recibe un aviso cuando cae un objeto que quieres.
+## Notes-esMX: Listas de deseos de banda: elige tu BiS jefe a jefe, mira las listas de tu hermandad y recibe un aviso cuando cae un objeto que quieres.
+## Notes-ptBR: Listas de desejos de raide: escolha seu BiS chefe a chefe, veja as listas da sua guilda e receba um alerta quando um item desejado cair.
+## Notes-itIT: Liste dei desideri per le incursioni: scegli il tuo BiS boss per boss, vedi le liste della gilda e ricevi un avviso quando cade un oggetto che vuoi.
+## Notes-ruRU: Списки желаемой добычи: выбирайте BiS по боссам, смотрите списки гильдии и получайте оповещение, когда выпадает нужный предмет.
+## Notes-koKR: 공격대 위시리스트: 우두머리별로 BiS를 고르고, 길드원의 목록을 보고, 원하는 아이템이 나오면 알림을 받으세요.
+## Notes-zhCN: 团队副本心愿单：按首领挑选BiS装备，查看公会成员的清单，想要的物品掉落时会提醒你。
+## Notes-zhTW: 團隊副本願望清單：依首領挑選BiS裝備，查看公會成員的清單，想要的物品掉落時會提醒你。
+## Author: Orion (EU Silvermoon)
+## Version: 2.3.1
+## X-Curse-Project-ID: 1731529
+## Category: Raid
+## IconTexture: Interface\AddOns\OrionBiS\Media\Icons\Logo
+## AddonCompartmentFunc: OrionBiS_OnAddonCompartmentClick
+## SavedVariables: OrionBiSDB
+## OptionalDeps: OrionBiS_GuildData
+
+Locales\Locales.lua
+Locales\deDE.lua
+Locales\frFR.lua
+Locales\esES.lua
+Locales\ptBR.lua
+Locales\itIT.lua
+Locales\ruRU.lua
+Locales\koKR.lua
+Locales\zhCN.lua
+Locales\zhTW.lua
+
+Core.lua
+Loot.lua
+UI\Theme.lua
+UI\Alert.lua
+UI\Main.lua
+UI\Minimap.lua
