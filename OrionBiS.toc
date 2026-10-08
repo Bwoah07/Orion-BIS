@@ -1,4 +1,4 @@
-## Interface: 120105
+## Interface: 120100, 120105
 ## Title: Orion BiS
 ## Notes: Raid wishlists: pick your BiS boss by boss, see your guild's lists, and get an alert when an item you want drops.
 ## Notes-deDE: Raid-Wunschlisten: BiS Boss für Boss wählen, die Listen deiner Gilde sehen und eine Meldung erhalten, wenn ein gewünschter Gegenstand droppt.
@@ -15,7 +15,7 @@
 ## Version: 2.3.2
 ## X-Curse-Project-ID: 1731529
 ## Category: Raid
-## IconTexture: Interface\AddOns\OrionBiS\Media\Icons\Logo
+## IconTexture: Interface\AddOns\OrionBiS\Media\Icons\AddonIcon
 ## AddonCompartmentFunc: OrionBiS_OnAddonCompartmentClick
 ## SavedVariables: OrionBiSDB
 ## OptionalDeps: OrionBiS_GuildData
