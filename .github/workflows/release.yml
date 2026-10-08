@@ -1,10 +1,13 @@
 name: Release
 
-# Push a tag like 2.3.1 to build the zip and upload it to CurseForge and GitHub Releases.
+# Every push to main checks the version in OrionBiS.toc. If there is no tag for it yet, the
+# workflow tags it and uploads the build to CurseForge and GitHub Releases. So to release:
+# bump "## Version", add a CHANGELOG.md entry, merge.
 on:
   push:
-    tags:
-      - "*"
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,4 +22,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Tag the new version
+        id: tag
+        run: |
+          version=$(grep -m1 '^## Version:' OrionBiS.toc | sed 's/^## Version:[[:space:]]*//' | tr -d '\r[:space:]')
+          if [ -z "$version" ]; then echo "No version in OrionBiS.toc"; exit 1; fi
+          if git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
+            echo "$version is already released, nothing to do."
+            echo "new=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$version" -m "$version"
+          git push origin "$version"
+          echo "new=true" >> "$GITHUB_OUTPUT"
+
       - uses: BigWigsMods/packager@v2
+        if: steps.tag.outputs.new == 'true'

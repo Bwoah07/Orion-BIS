@@ -6,9 +6,10 @@ and get an alert when something on your list drops.
 `/bis` opens the window. `/bis help` lists every command.
 
 ## Releases
-Pushing a tag (for example `2.3.1`) runs `.github/workflows/release.yml`, which packages the addon with the
-BigWigs packager and uploads it to CurseForge and GitHub Releases. Bump `## Version` in `OrionBiS.toc` and add a
-`CHANGELOG.md` entry first. The CurseForge token lives in the repo secret `CF_API_KEY`.
+To release, bump `## Version` in `OrionBiS.toc`, add a `CHANGELOG.md` entry and merge to `main`.
+`.github/workflows/release.yml` sees the new version, tags it, packages the addon with the BigWigs packager and
+uploads it to CurseForge and GitHub Releases. Pushes that don't change the version do nothing. The CurseForge
+token lives in the repo secret `CF_API_KEY`.
 
 ## Files
 - `Core.lua` lists, the ORIONBIS1 code format, guild sync, slash commands
