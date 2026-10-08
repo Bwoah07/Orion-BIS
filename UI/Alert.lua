@@ -434,7 +434,7 @@ end
 
 local recent = {}
 
-local function onDrop(link, force)
+local function onDrop(link, force, test)
     link = ns.safe(link)
     if type(link) ~= "string" or not ns.Setting("alerts") then return end
     local itemId, _, _, _, icon = C_Item.GetItemInfoInstant(link)
@@ -446,7 +446,8 @@ local function onDrop(link, force)
     recent[itemId] = t
 
     local mineOpen = mine and not mine.got
-    if mineOpen and ns.Setting("sound") then ns.PlayAlertSound() end
+    -- A test always plays the sound (if sound is on), whatever item it happens to pick.
+    if (mineOpen or test) and ns.Setting("sound") then ns.PlayAlertSound() end
     if mineOpen then ns.Print(L["%s is on your list (%s)"]:format(link, ns.PriorityLabel(mine.p))) end
     local others = ns.WantersText(itemId, true)
     showToast({
@@ -458,10 +459,16 @@ end
 
 function ns.TestAlert()
     local list = ns.MyList()
-    local itemId = list and next(list.items) or next(ns.ItemsWanted())
+    -- Prefer an item you still need, so the test looks like a real drop of yours.
+    local itemId
+    for id, want in pairs(list and list.items or {}) do
+        if not want.got then itemId = id break end
+        itemId = itemId or id
+    end
+    itemId = itemId or next(ns.ItemsWanted())
     if not itemId then ns.Print(L["Add an item to your list first."]); return end
     local _, link = C_Item.GetItemInfo(itemId)
-    onDrop(link or ("|cffa335ee|Hitem:" .. itemId .. "::::::::::::|h[item " .. itemId .. "]|h|r"), true)
+    onDrop(link or ("|cffa335ee|Hitem:" .. itemId .. "::::::::::::|h[item " .. itemId .. "]|h|r"), true, true)
 end
 
 -- Moving: a gold outline you can drag, with a hint. Right-click or the Settings button locks it.
